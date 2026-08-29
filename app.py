@@ -389,8 +389,8 @@ with tab3:
                     lon_val = float(lon)
                     st.write("**Detected GPS Asset Location:**")
                     map_df = pd.DataFrame({
-                        'latitude': [lat_val],
-                        'longitude': [lon_val]
+                        'lat': [lat_val],
+                        'lon': [lon_val]
                     })
                     st.map(map_df, zoom=14, use_container_width=True)
                 except (ValueError, TypeError) as e:
