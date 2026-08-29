@@ -3,22 +3,51 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 import os
 
+def load_and_merge_mp_data():
+    import re
+    
+    # 1. Load Lok Sabha
+    ls_df = pd.read_csv('data/lok_sabha_allocation.csv', encoding='utf-8-sig')
+    ls_df.columns = ['sr_no', 'state', 'mp_name', 'constituency', 'fund_sanctioned']
+    ls_df['house'] = "Lok Sabha"
+    ls_df['elected_or_nominated'] = np.nan
+    
+    # 2. Load Rajya Sabha
+    rs_df = pd.read_csv('data/rajya_sabha_allocation.csv', encoding='utf-8-sig')
+    rs_df.columns = ['sr_no', 'state', 'mp_name', 'elected_or_nominated', 'fund_sanctioned']
+    rs_df['mp_name'] = rs_df['mp_name'].apply(lambda name: re.sub(r'\s*\(.*?\)', '', str(name)).strip())
+    rs_df['constituency'] = rs_df['state']
+    rs_df['house'] = "Rajya Sabha"
+    
+    # 3. Same columns order before merging
+    columns_order = ['sr_no', 'state', 'mp_name', 'constituency', 'fund_sanctioned', 'house', 'elected_or_nominated']
+    ls_df = ls_df[columns_order]
+    rs_df = rs_df[columns_order]
+    
+    # 4. Concatenate and reset sr_no
+    combined = pd.concat([ls_df, rs_df], ignore_index=True)
+    combined['sr_no'] = range(1, len(combined) + 1)
+    
+    # 5. Convert to numeric and drop NaNs
+    combined['fund_sanctioned'] = pd.to_numeric(combined['fund_sanctioned'], errors='coerce')
+    combined = combined.dropna(subset=['fund_sanctioned']).reset_index(drop=True)
+    
+    return combined
+
 def get_data():
-    # Load the CSV
     try:
-        df = pd.read_csv('data/mplad_allocation.csv', encoding='utf-8-sig')
-        df.columns = ['sr_no','state','mp_name','constituency','fund_sanctioned']
-        df['fund_sanctioned'] = pd.to_numeric(df['fund_sanctioned'], errors='coerce')
-        df = df.dropna(subset=['fund_sanctioned']).reset_index(drop=True)
+        df = load_and_merge_mp_data()
     except FileNotFoundError:
         # Fallback for testing if file doesn't exist
-        print("Warning: data/mplad_allocation.csv not found. Using generated mock data.")
+        print("Warning: data/lok_sabha_allocation.csv or data/rajya_sabha_allocation.csv not found. Using generated mock data.")
         df = pd.DataFrame({
             'sr_no': range(1, 101),
             'state': ['State A', 'State B'] * 50,
             'mp_name': ['MP ' + str(i%10) for i in range(100)],
             'constituency': ['Const ' + str(i) for i in range(100)],
-            'fund_sanctioned': np.random.uniform(5, 25, 100) # in Cr
+            'fund_sanctioned': np.random.uniform(5, 25, 100), # in Cr
+            'house': ['Lok Sabha', 'Rajya Sabha'] * 50,
+            'elected_or_nominated': [np.nan, 'Elected'] * 50
         })
         
     np.random.seed(42)

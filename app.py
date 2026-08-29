@@ -7,7 +7,11 @@ from data import get_data
 from google import genai
 from PIL import Image, ExifTags
 import io
+import os
 from fpdf import FPDF
+
+if "GEMINI_API_KEY" in st.secrets:
+    os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
 
 st.set_page_config(page_title="MPLAD Integrity Engine", layout="wide")
 
@@ -137,18 +141,8 @@ def create_show_cause_notice(mp_name, constituency, vendor, reason):
     # Generate QR Code
     qr = qrcode.QRCode(box_size=4, border=1)
     
-    import socket
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('10.255.255.255', 1))
-        local_ip = s.getsockname()[0]
-    except Exception:
-        local_ip = '127.0.0.1'
-    finally:
-        s.close()
-        
-    # Use the local IP so scanning it opens the Streamlit app directly on a connected device
-    verification_url = f"http://{local_ip}:8501/?notice_id={ref_id.split(': ')[-1]}"
+    # Hardcoded Streamlit Cloud URL for the QR code
+    verification_url = f"https://mplad-integrity-engine-lujvjnrykbefiwdxjk5cg5.streamlit.app/?notice_id={ref_id.split(': ')[-1]}"
     qr.add_data(verification_url)
     
     qr.make(fit=True)
@@ -172,6 +166,10 @@ def create_show_cause_notice(mp_name, constituency, vendor, reason):
 # Sidebar filters
 st.sidebar.header("Filters")
 
+# House filter
+all_houses = ["Lok Sabha", "Rajya Sabha"]
+selected_houses = st.sidebar.multiselect("Select House(s)", all_houses, default=all_houses)
+
 # State filter
 all_states = sorted(df['state'].unique().tolist())
 selected_states = st.sidebar.multiselect("Select State(s)", all_states, default=all_states)
@@ -182,6 +180,7 @@ selected_risks = st.sidebar.multiselect("Select Risk Level(s)", all_risks, defau
 
 # Apply filters
 filtered_df = df[
+    (df['house'].isin(selected_houses)) &
     (df['state'].isin(selected_states)) &
     (df['risk_level'].isin(selected_risks))
 ].copy()
@@ -209,12 +208,13 @@ filtered_df['risk_sort'] = filtered_df['risk_level'].map(sort_map)
 sorted_df = filtered_df.sort_values(by=['risk_sort', 'anomaly_score'], ascending=[True, True])
 
 # Add physical progress to your display columns
-display_cols = ['mp_name', 'state', 'constituency', 'physical_progress_percent', 'risk_level', 'anomaly_score', 'rules_str']
+display_cols = ['mp_name', 'house', 'state', 'constituency', 'physical_progress_percent', 'risk_level', 'anomaly_score', 'rules_str']
 
 st.dataframe(
     sorted_df[display_cols], 
     column_config={
         "mp_name": "MP Name",
+        "house": "House",
         "state": "State",
         "constituency": "Constituency",
         "physical_progress_percent": st.column_config.ProgressColumn(
