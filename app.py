@@ -384,10 +384,17 @@ with tab3:
                     
         with col_map:
             if lat is not None and lon is not None:
-                st.write("**Detected GPS Asset Location:**")
-                # Plot the exact coordinates on a Streamlit map
-                map_df = pd.DataFrame({'latitude': [float(lat)], 'longitude': [float(lon)]})
-                st.map(map_df, zoom=14, use_container_width=True)
+                try:
+                    lat_val = float(lat)
+                    lon_val = float(lon)
+                    st.write("**Detected GPS Asset Location:**")
+                    map_df = pd.DataFrame({
+                        'latitude': [lat_val],
+                        'longitude': [lon_val]
+                    })
+                    st.map(map_df, zoom=14, use_container_width=True)
+                except (ValueError, TypeError) as e:
+                    st.warning(f"⚠️ GPS data found but couldn't be parsed: {e}")
             else:
                 st.warning("⚠️ No geotag detected. High probability of stock/fraudulent image.")
 
