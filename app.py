@@ -389,12 +389,12 @@ with tab3:
                     lon_val = float(lon)
                     st.write("**Detected GPS Asset Location:**")
                     map_df = pd.DataFrame({
-                        'lat': [lat_val],
-                        'lon': [lon_val]
+                        "latitude": [lat_val],
+                        "longitude": [lon_val]
                     })
                     st.map(map_df, zoom=14, use_container_width=True)
                 except (ValueError, TypeError) as e:
-                    st.warning(f"⚠️ GPS data found but couldn't be parsed: {e}")
+                    st.warning(f"⚠️ GPS data found but could not be parsed: {e}")
             else:
                 st.warning("⚠️ No geotag detected. High probability of stock/fraudulent image.")
 
