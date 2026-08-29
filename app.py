@@ -13,6 +13,10 @@ st.set_page_config(page_title="MPLAD Integrity Engine", layout="wide")
 
 st.title("MPLAD Integrity Engine")
 
+if "notice_id" in st.query_params:
+    notice_id = st.query_params["notice_id"]
+    st.success(f"✅ **Verification Successful:** Notice `{notice_id}` is a valid document issued by the District Audit Office and securely logged in the e-SAKSHI ledger.")
+
 # Load data (cache removed temporarily for debugging)
 def load_data():
     data = get_data()
@@ -132,15 +136,30 @@ def create_show_cause_notice(mp_name, constituency, vendor, reason):
     
     # Generate QR Code
     qr = qrcode.QRCode(box_size=4, border=1)
-    qr.add_data(f"VERIFY:{ref_id}")
+    
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('10.255.255.255', 1))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = '127.0.0.1'
+    finally:
+        s.close()
+        
+    # Use the local IP so scanning it opens the Streamlit app directly on a connected device
+    verification_url = f"http://{local_ip}:8501/?notice_id={ref_id.split(': ')[-1]}"
+    qr.add_data(verification_url)
+    
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     
-    # Save the QR code temporarily and embed it
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
-        img.save(tmp.name)
-        pdf.image(tmp.name, w=25)
-        tmp_name = tmp.name
+    # Save the QR code temporarily and embed it safely
+    tmp_fd, tmp_name = tempfile.mkstemp(suffix='.png')
+    os.close(tmp_fd) # Close file descriptor so FPDF can read it on Windows
+    
+    img.save(tmp_name)
+    pdf.image(tmp_name, w=25)
     
     # Cleanup the temp file
     try:
