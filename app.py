@@ -371,19 +371,22 @@ with tab3:
         
         with col_img:
             st.image(uploaded_photo, use_container_width=True, caption="Uploaded Site Photo")
+            
+            uploaded_photo.seek(0)  # reset pointer before first read
             lat, lon, msg = extract_exif_with_gps(uploaded_photo)
             st.write(f"**Metadata Status:** {msg}")
             
             if st.button("Run AI Vision Authenticity Scan"):
                 with st.spinner("Analyzing structural authenticity..."):
+                    uploaded_photo.seek(0)  # reset pointer again before second read
                     verdict = verify_site_photo_with_ai(uploaded_photo, "MPLADS Construction Site")
                     st.info(verdict)
                     
         with col_map:
-            if lat and lon:
+            if lat is not None and lon is not None:
                 st.write("**Detected GPS Asset Location:**")
                 # Plot the exact coordinates on a Streamlit map
-                map_df = pd.DataFrame({'latitude': [lat], 'longitude': [lon]})
+                map_df = pd.DataFrame({'latitude': [float(lat)], 'longitude': [float(lon)]})
                 st.map(map_df, zoom=14, use_container_width=True)
             else:
                 st.warning("⚠️ No geotag detected. High probability of stock/fraudulent image.")
